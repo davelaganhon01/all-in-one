@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
   "numpy",
   "librosa",
-  "natten; platform_system == 'Darwin'",
+  "natten<0.17.5; platform_system == 'Darwin'",
   "demucs",
   "hydra-core",
   "omegaconf",
@@ -35,6 +35,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+web = [
+  "Flask>=3.0",
+  "Flask-Login>=0.6",
+  "Flask-SQLAlchemy>=3.1",
+  "Flask-WTF>=1.2",
+]
 train = [
   "lightning",
   "timm",

@@ -36,13 +36,20 @@ This package provides models for music structure analysis, predicting:
 
 Visit [PyTorch](https://pytorch.org/) and install the appropriate version for your system.
 
-### 2. Install NATTEN (Required for Linux and Windows; macOS will auto-install)
-* **Linux**: Download from [NATTEN website](https://www.shi-labs.com/natten/)
-* **macOS**: Auto-installs with `allin1`.
-* **Windows**: Build from source:
+### 2. Install a compatible NATTEN build (Required for Linux and Windows; macOS will auto-install)
+
+This version of All-In-One uses legacy NATTEN attention functions that were
+removed in NATTEN 0.17.5. Install **NATTEN < 0.17.5**, built for the exact
+PyTorch version in your environment. PyTorch 2.5 with NATTEN 0.17.4 is the
+latest supported version pair for these functions. Newer NATTEN releases are
+not compatible with this analyzer.
+
+* **Linux**: Install a matching legacy wheel from the [NATTEN installation page](https://natten.org/install/). If there is no wheel for your PyTorch build, use the matching source build.
+* **macOS**: The project installs NATTEN `<0.17.5` automatically.
+* **Windows**: Build the compatible release from source:
 ```shell
 pip install ninja # Recommended, not required
-git clone https://github.com/SHI-Labs/NATTEN
+git clone --branch v0.17.4 https://github.com/SHI-Labs/NATTEN
 cd NATTEN
 make
 ```
@@ -450,6 +457,47 @@ where the conventional tolerance is just 70ms.
 Hence, I advise standardizing inputs to the WAV format for all data processing, 
 ensuring straightforward decoding.
 
+
+## Web Application
+
+The optional Flask application provides account approval, per-account expiry and
+analysis limits, and a browser-based audio analysis dashboard.
+
+Install PyTorch and the platform-specific NATTEN requirements in
+[Installation](#installation), then install `madmom` and the web application in
+the same Python environment:
+```shell
+pip install git+https://github.com/CPJKU/madmom
+pip install -e ".[web]"
+```
+
+Set a persistent secret key, then start the server:
+```shell
+export SECRET_KEY="replace-this-with-a-long-random-secret"
+python app.py
+```
+
+Open `http://127.0.0.1:5000` locally and register the first account to create
+the owner. In a VS Code remote workspace, open the **Ports** panel and use the
+forwarded address for port `5000`.
+Later registrations are pending until the owner approves them. Uploaded audio
+is analyzed in a background job so long-running tracks do not time out the
+browser connection. The web app defaults to the eight-model `harmonix-all`
+ensemble. For faster analysis with a single model, set
+`ALLIN1_MODEL=harmonix-fold0` before starting the app. A CUDA-capable GPU and
+compatible PyTorch/NATTEN installation are recommended for faster ensemble
+analysis.
+The app can run up to two analyses at once, so a second upload does not need to
+wait for the first to finish. Concurrent analyses use more CPU/GPU memory.
+The model is kept in memory after its first load, avoiding repeated model setup
+for later uploads; restart the app to release it or apply model-setting changes.
+The browser uploads audio in 256 KiB chunks to work with reverse proxies that
+reject large individual requests; the overall file-size limit remains 100 MiB.
+Uploaded audio and the SQLite database are stored under `instance/` by default. Configure
+`ALLIN1_UPLOAD_FOLDER` or `DATABASE_URL` to use alternate storage locations.
+For HTTPS deployments, set `COOKIE_SECURE=1` and run the app behind a production
+WSGI server and HTTPS reverse proxy; do not use Flask's development server in
+production.
 
 ## Training
 Please refer to [TRAINING.md](TRAINING.md).

@@ -1,5 +1,7 @@
 import torch
 
+from functools import lru_cache
+from threading import Lock
 from typing import List, Union
 from tqdm import tqdm
 from .demix import demix
@@ -16,6 +18,19 @@ from .helpers import (
 )
 from .utils import mkpath, load_result
 from .typings import AnalysisResult, PathLike
+
+
+_MODEL_CACHE_LOCK = Lock()
+
+
+@lru_cache(maxsize=1)
+def _load_model_cached(model_name: str, device: str):
+  return load_pretrained_model(model_name=model_name, device=device)
+
+
+def _get_model(model_name: str, device: str):
+  with _MODEL_CACHE_LOCK:
+    return _load_model_cached(model_name, device)
 
 
 def analyze(
@@ -121,12 +136,9 @@ def analyze(
     spec_paths = extract_spectrograms(demix_paths, spec_dir, multiprocess)
 
     # Load the model.
-    model = load_pretrained_model(
-      model_name=model,
-      device=device,
-    )
+    model = _get_model(model, device)
 
-    with torch.no_grad():
+    with torch.inference_mode():
       pbar = tqdm(zip(todo_paths, spec_paths), total=len(todo_paths))
       for path, spec_path in pbar:
         pbar.set_description(f'Analyzing {path.name}')
